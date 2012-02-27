@@ -1,10 +1,11 @@
 /*****************************************************************************
  * libs.h: VLC Lua wrapper libraries
  *****************************************************************************
- * Copyright (C) 2008 the VideoLAN team
+ * Copyright (C) 2008-2012 the VideoLAN team
  * $Id$
  *
- * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>,
+ *			Brendon Justin <brendonjustin@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +48,9 @@ void luaopen_xml( lua_State *L );
 void luaopen_equalizer( lua_State *L );
 #ifdef WIN32
 void luaopen_win( lua_State *L );
+#endif
+#ifdef __APPLE__
+void luaopen_airplay_bonjour( lua_State *L );
 #endif
 
 #endif
