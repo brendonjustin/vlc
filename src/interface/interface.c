@@ -93,6 +93,11 @@ int intf_Create( vlc_object_t *p_this, const char *chain )
     var_Change( p_intf, "intf-add", VLC_VAR_ADDCHOICE, &val, &text );
     val.psz_string = (char *)"http";
     text.psz_string = (char *)_("Web");
+#if defined( __APPLE__ )
+    var_Change( p_intf, "intf-add", VLC_VAR_ADDCHOICE, &val, &text );
+    val.psz_string = (char *)"airplay";
+    text.psz_string = (char *)_("AirPlay");
+#endif
     var_Change( p_intf, "intf-add", VLC_VAR_ADDCHOICE, &val, &text );
     val.psz_string = (char *)"logger";
     text.psz_string = (char *)_("Debug logging");

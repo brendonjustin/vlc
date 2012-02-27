@@ -176,6 +176,7 @@ if BUILD_HTTPD
 nobase_vlclib_DATA += \
 	lua/intf/http.luac \
 	lua/intf/modules/httprequests.luac \
+	lua/intf/airplay.luac \
 	$(NULL)
 nobase_vlcdata_DATA += $(DIST_http_lua)
 nobase_doc_DATA += lua/http/requests/README.txt
@@ -187,6 +188,7 @@ EXTRA_DIST += \
 	lua/README.txt \
 	lua/extensions/README.txt \
 	lua/intf/README.txt \
+	lua/intf/airplay.lua \
 	lua/intf/cli.lua \
 	lua/intf/dummy.lua \
 	lua/intf/dumpmeta.lua \

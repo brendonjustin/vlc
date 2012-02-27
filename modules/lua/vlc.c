@@ -130,6 +130,15 @@ vlc_module_begin ()
         set_description( N_("Lua Telnet") )
         add_shortcut( "luatelnet", "telnet" )
 
+#ifdef __APPLE__
+    add_submodule ()
+        set_section( N_("Lua AirPlay"), 0 )
+        set_capability( "interface", 0 )
+        set_callbacks( Open_LuaAirplay, Close_LuaIntf )
+        set_description( N_("Lua AirPlay") )
+        add_shortcut( "airplay" )
+#endif
+
     add_submodule ()
         set_shortname( N_( "Lua Meta Fetcher" ) )
         set_description( N_("Fetch meta data using lua scripts") )

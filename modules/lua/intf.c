@@ -136,6 +136,12 @@ static char *MakeConfig( intf_thread_t *p_intf, const char *name )
             free( psz_rc_host );
         }
     }
+#ifdef __APPLE__
+    else if( !strcmp( name, "airplay" ) )
+    {
+        asprintf( &psz_config, "airplay" );
+    }
+#endif
 
     return psz_config;
 }
@@ -434,3 +440,10 @@ int Open_LuaTelnet( vlc_object_t *p_this )
     free( pw );
     return Start_LuaIntf( p_this, "telnet" );
 }
+
+#ifdef __APPLE__
+int Open_LuaAirplay( vlc_object_t *p_this )
+{
+    return Start_LuaIntf( p_this, "airplay" );
+}
+#endif
