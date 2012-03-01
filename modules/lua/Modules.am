@@ -48,7 +48,7 @@ SOURCES_lua += libs/win.c
 endif
 
 if HAVE_DARWIN
-SOURCES_lua += libs/airplay_bonjour.m
+SOURCES_lua += libs/bonjour.m
 LDFLAGS_lua += -Wl,-framework,Cocoa
 endif
 

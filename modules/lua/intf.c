@@ -136,12 +136,6 @@ static char *MakeConfig( intf_thread_t *p_intf, const char *name )
             free( psz_rc_host );
         }
     }
-#ifdef __APPLE__
-    else if( !strcmp( name, "airplay" ) )
-    {
-        asprintf( &psz_config, "airplay" );
-    }
-#endif
 
     return psz_config;
 }
@@ -276,7 +270,7 @@ static int Start_LuaIntf( vlc_object_t *p_this, const char *name )
     luaopen_win( L );
 #endif
 #ifdef __APPLE__
-    luaopen_airplay_bonjour( L );
+    luaopen_bonjour( L );
 #endif
 
     /* clean up */

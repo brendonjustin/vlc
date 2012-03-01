@@ -50,7 +50,7 @@ void luaopen_equalizer( lua_State *L );
 void luaopen_win( lua_State *L );
 #endif
 #ifdef __APPLE__
-void luaopen_airplay_bonjour( lua_State *L );
+void luaopen_bonjour( lua_State *L );
 #endif
 
 #endif

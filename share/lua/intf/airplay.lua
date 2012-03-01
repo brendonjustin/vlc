@@ -55,7 +55,8 @@ local APPLETV_SERVER_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 <key>srcvers</key>
 <string>101.10</string>
 </dict>
-</plist>]]
+</plist>
+]]
 
 PLAYBACK_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -94,7 +95,8 @@ PLAYBACK_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
     </dict>
 </array>
 </dict>
-</plist>]]
+</plist>
+]]
 
 -- POST
 function callback_reverse(data, url, request, type, addr, host)
@@ -116,11 +118,22 @@ function callback_play(data, url, request, type, in_var, addr, host)
     vlc.msg.dbg("callback_play")
     if in_var then
         vlc.msg.dbg("in_var: "..in_var)
+        --  Try one format first, then anothers
+        local playback_url = nil
+        local start_time = nil
+        --  Try regular plist format, then biplist
         local i, j = string.find(in_var, "Location: ")
-        local k = string.find(in_var, "Start")
-        local playback_url = string.sub(in_var, j+1, k-2)
-        i, j = string.find(in_var, "Position: ")
-        local start_time = string.sub(in_var, j+1)
+        if (i ~= nil and j ~= nil) then
+            local k = string.find(in_var, "Start")
+            playback_url = string.sub(in_var, j+1, k-2)
+            i, j = string.find(in_var, "Position: ")
+            start_time = string.sub(in_var, j+1)
+        else
+            i, j = string.find(in_var, "Location")
+            local k, l = string.find(in_var, ".mp4")
+            playback_url = string.sub(in_var, j+9, l)
+            start_time = 0
+        end
 
         vlc.playlist.add({{path=vlc.strings.make_uri(playback_url)}})
 
@@ -143,7 +156,7 @@ end
 function callback_scrub(data, url, request, type, in_var, addr, host)
     if type and type == 2 then
         vlc.msg.dbg("callback_scrub (GET)")
-    elseif type == 4 then
+    elseif type and type == 4 then
         vlc.msg.dbg("callback_scrub (POST)")
     end
     
@@ -181,9 +194,7 @@ position: %f
             return [[Content-Length: ]]..string.len(scrub_body)..[[
 
 
-]]..scrub_body..[[
-
-]]
+]]..scrub_body
         end
     elseif type == 4 then
         -- POST
@@ -267,9 +278,7 @@ function callback_server_info(data, url, request, type, addr, host)
 Content-Length: ]]..string.len(APPLETV_SERVER_INFO)..[[
 
 
-]]..APPLETV_SERVER_INFO..[[
-
-]]
+]]..APPLETV_SERVER_INFO
 end
 
 -- GET
@@ -292,7 +301,7 @@ function callback_playback_info(data, url, request, type, in_var, addr, host)
     local duration =  0
     local position = 0
     local playing = 0
-
+    
     local input = vlc.object.input()
 
     if input then
@@ -317,15 +326,15 @@ function callback_playback_info(data, url, request, type, in_var, addr, host)
         playing = 0
     end
 
+    -- vlc.playlist.status() always returns "paused" so just set playing to 1
+    playing = 1
     info_string = string.format(PLAYBACK_INFO, duration, duration, position, playing, duration)
 
     return [[Content-Type: text/x-apple-plist+xml
 Content-Length: ]]..string.len(info_string)..[[
 
 
-]]..info_string..[[
-
-]]
+]]..info_string
 end
 
 -- POST
@@ -340,27 +349,24 @@ Placeholder text.
 ]]
 end
 
-if config then
-    if config.host then
-        vlc.msg.err("\""..config.host.."\" HTTP host ignored")
-        local port = string.match(config.host, ":(%d+)[^]]*$")
-        vlc.msg.info("Pass --http-host=IP "..(port and "and --http-port="..port.." " or "").."on the command line instead.")
-    end
-end
+-- Advertise AirPlay support via Bonjour/Avahi
+bonjour = vlc.bonjour()
+bonjour:new_service("local.", "_airplay._tcp", "VLC", "8080")
+bonjour:add_record("deviceid", "00:00:00:00:00:00")
+bonjour:add_record("features", "0x77")
+bonjour:add_record("model", "AppleTV2,1")
+bonjour:add_record("srcvers", "101.10")
+bonjour:publish_service()
 
---  Start broadcasting AirPlay support via Bonjour/Avahi
-bc = vlc.airplay_bonjour()
 h = vlc.httpd()
 
-local reverse = h:handler("/reverse",nil,nil,nil,callback_reverse,nil)
-local play = h:handler("/play",nil,nil,nil,callback_play,nil)
-local scrub = h:handler("/scrub",nil,nil,nil,callback_scrub,nil)
-local rate = h:handler("/rate",nil,nil,nil,callback_rate,nil)
-local photo = h:handler("/photo",nil,nil,nil,callback_photo,nil)
-local authorize = h:handler("/authorize",nil,nil,nil,callback_authorize,nil)
-local srv_info = h:handler("/server-info",nil,nil,nil,callback_server_info,nil)
-local slideshow_fts = h:handler("/slideshow-features",nil,nil,nil,callback_slideshow_features,nil)
-local playback_info = h:handler("/playback-info",nil,nil,nil,callback_playback_info,nil)
-local stop = h:handler("/stop",nil,nil,nil,callback_stop,nil)
-
-while not vlc.misc.lock_and_wait() do end -- everything happens in callbacks
+local reverse = h:handler("/reverse",nil,nil,callback_reverse,nil)
+local play = h:handler("/play",nil,nil,callback_play,nil)
+local scrub = h:handler("/scrub",nil,nil,callback_scrub,nil)
+local rate = h:handler("/rate",nil,nil,callback_rate,nil)
+local photo = h:handler("/photo",nil,nil,callback_photo,nil)
+local authorize = h:handler("/authorize",nil,nil,callback_authorize,nil)
+local srv_info = h:handler("/server-info",nil,nil,callback_server_info,nil)
+local slideshow_fts = h:handler("/slideshow-features",nil,nil,callback_slideshow_features,nil)
+local playback_info = h:handler("/playback-info",nil,nil,callback_playback_info,nil)
+local stop = h:handler("/stop",nil,nil,callback_stop,nil)
