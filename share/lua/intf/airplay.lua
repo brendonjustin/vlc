@@ -55,8 +55,7 @@ local APPLETV_SERVER_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 <key>srcvers</key>
 <string>101.10</string>
 </dict>
-</plist>
-]]
+</plist>]]
 
 PLAYBACK_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -95,8 +94,7 @@ PLAYBACK_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
     </dict>
 </array>
 </dict>
-</plist>
-]]
+</plist>]]
 
 -- POST
 function callback_reverse(data, url, request, type, addr, host)
@@ -121,7 +119,6 @@ function callback_play(data, url, request, type, in_var, addr, host)
         --  Try one format first, then anothers
         local playback_url = nil
         local start_time = nil
-        --  Try regular plist format, then biplist
         local i, j = string.find(in_var, "Location: ")
         if (i ~= nil and j ~= nil) then
             local k = string.find(in_var, "Start")
@@ -328,7 +325,7 @@ function callback_playback_info(data, url, request, type, in_var, addr, host)
 
     -- vlc.playlist.status() always returns "paused" so just set playing to 1
     playing = 1
-    info_string = string.format(PLAYBACK_INFO, duration, duration, position, playing, duration)
+    info_string = string.format(PLAYBACK_INFO, duration, position+1, position, playing, position+1)
 
     return [[Content-Type: text/x-apple-plist+xml
 Content-Length: ]]..string.len(info_string)..[[
@@ -360,13 +357,13 @@ bonjour:publish_service()
 
 h = vlc.httpd()
 
-local reverse = h:handler("/reverse",nil,nil,callback_reverse,nil)
-local play = h:handler("/play",nil,nil,callback_play,nil)
-local scrub = h:handler("/scrub",nil,nil,callback_scrub,nil)
-local rate = h:handler("/rate",nil,nil,callback_rate,nil)
-local photo = h:handler("/photo",nil,nil,callback_photo,nil)
-local authorize = h:handler("/authorize",nil,nil,callback_authorize,nil)
-local srv_info = h:handler("/server-info",nil,nil,callback_server_info,nil)
-local slideshow_fts = h:handler("/slideshow-features",nil,nil,callback_slideshow_features,nil)
-local playback_info = h:handler("/playback-info",nil,nil,callback_playback_info,nil)
-local stop = h:handler("/stop",nil,nil,callback_stop,nil)
+reverse = h:handler("/reverse",nil,nil,callback_reverse,nil)
+play = h:handler("/play",nil,nil,callback_play,nil)
+scrub = h:handler("/scrub",nil,nil,callback_scrub,nil)
+rate = h:handler("/rate",nil,nil,callback_rate,nil)
+photo = h:handler("/photo",nil,nil,callback_photo,nil)
+authorize = h:handler("/authorize",nil,nil,callback_authorize,nil)
+srv_info = h:handler("/server-info",nil,nil,callback_server_info,nil)
+slideshow_fts = h:handler("/slideshow-features",nil,nil,callback_slideshow_features,nil)
+playback_info = h:handler("/playback-info",nil,nil,callback_playback_info,nil)
+stop = h:handler("/stop",nil,nil,callback_stop,nil)
