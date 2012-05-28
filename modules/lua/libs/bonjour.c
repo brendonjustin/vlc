@@ -28,94 +28,24 @@
 #include "../vlc.h"
 #include "../libs.h"
 
-#import <Cocoa/Cocoa.h>
+#include <dns_sd.h>
+#include <arpa/inet.h>
+
 
 /*****************************************************************************
- * BonjourAdvertiser Helper Class Definition
+ * Structures
  *****************************************************************************/
-
-@interface BonjourAdvertiser : NSObject <NSNetServiceDelegate>
+typedef struct bonjour_t
 {
-    NSNetService *m_service;
-    NSMutableArray *m_services;
-    NSMutableDictionary *m_txtRecordDict;
-}
+    lua_State           *L;
 
-- (void)setDomain:(NSString *)domain type:(NSString *)type name:(NSString *)name andPort:(int)port;
-- (void)addTXTRecordWithKey:(NSString *)key andValue:(NSString *)value;
-- (void)register;
-- (void)stop;
-
-@end
-
-/*****************************************************************************
- * BonjourAdvertiser Helper Class Implementation
- *****************************************************************************/
-
-@implementation BonjourAdvertiser
-
-- (id)init 
-{
-    if ( (self = [super init]) ) {
-        m_service = nil;
-        m_services = [[NSMutableArray alloc] init];
-        m_txtRecordDict = [[NSMutableDictionary alloc] init];
-    }
-
-    return self;
-}
-
-- (void)dealloc
-{
-    [self stop];
-    [m_services release];
-    [m_txtRecordDict release];
-    [super dealloc];
-}
-
-- (void)stop
-{
-    for ( NSNetService *service in m_services )
-    {
-        [service stop];
-    }
-}
-
-- (void)setDomain:(NSString *)domain type:(NSString *)type name:(NSString *)name andPort:(int)port;
-{
-    if ( m_service ) {
-        [m_service release];
-    }
-    m_service = [[NSNetService alloc] initWithDomain:domain
-                                              type:type
-                                              name:name port:port];
-}
-
-- (void)addTXTRecordWithKey:(NSString *)key andValue:(NSString *)value
-{
-    [m_txtRecordDict setValue:value forKey:key];
-}
-
-- (void)register
-{
-    if( m_service )
-    {
-        [m_service setTXTRecordData:[NSNetService dataFromTXTRecordDictionary:m_txtRecordDict]];
-        [m_service setDelegate:self];
-        [m_service publish];
-    }
-}
-
-#pragma mark -
-#pragma mark NSNetServiceDelegate functions
-
-// Sent when the service is successfully published
-- (void)netServiceDidPublish:(NSNetService *)netService
-{
-    [m_services addObject:netService];
-}
-
-@end
+    char                *psz_stype;
+    char                *psz_name;
+    char                *psz_domain;
+    uint16_t            i_port;
+    DNSServiceRef       *p_sdRef;
+    TXTRecordRef        *p_txtRecord;
+} bonjour_t;
 
 /*****************************************************************************
  * Local prototypes
@@ -126,6 +56,7 @@ static int vlclua_bonjour_new_service( lua_State * );
 static int vlclua_bonjour_delete( lua_State * );
 static int vlclua_bonjour_add_record( lua_State * );
 static int vlclua_bonjour_publish_service( lua_State * );
+
 
 /*****************************************************************************
  * Bonjour Service Advertiser
@@ -140,9 +71,11 @@ static const luaL_Reg vlclua_bonjour_reg[] = {
 
 static int vlclua_bonjour_init( lua_State *L )
 {
-    BonjourAdvertiser *p_advertiser = [[BonjourAdvertiser alloc] init];
-    BonjourAdvertiser **pp_advertiser = lua_newuserdata( L, sizeof( BonjourAdvertiser *) );
-    *pp_advertiser = p_advertiser;
+    // vlc_object_t *p_this = vlclua_get_this( L );
+    bonjour_t *p_sys = (bonjour_t*)malloc( sizeof( bonjour_t ) );
+    bonjour_t **pp_sys = lua_newuserdata( L, sizeof( bonjour_t *) );
+    *pp_sys = p_sys;
+    p_sys->L = L;
 
     if( luaL_newmetatable( L, "bonjour_advertiser" ) )
     {
@@ -159,53 +92,85 @@ static int vlclua_bonjour_init( lua_State *L )
 
 static int vlclua_bonjour_new_service( lua_State *L )
 {
-    NSString *domain, *type, *name;
     int port;
 
     const char *psz_domain = luaL_checkstring( L, 2 );
     const char *psz_type = luaL_checkstring( L, 3 );
     const char *psz_hostname = luaL_checkstring( L, 4 );
     const char *psz_port = luaL_checkstring( L, 5 );
-
-    domain = [NSString stringWithUTF8String:psz_domain];
-    type = [NSString stringWithUTF8String:psz_type];
-    name = [NSString stringWithUTF8String:psz_hostname];
-    port = [[NSString stringWithUTF8String:psz_port] intValue];
+    port = atoi( psz_port );
     
-    BonjourAdvertiser **pp_advertiser = (BonjourAdvertiser **)luaL_checkudata( L, 1, "bonjour_advertiser" );
-    [*pp_advertiser setDomain:domain type:type name:name andPort:port];
+    bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
+    bonjour_t *p_sys = *pp_sys;
+
+    p_sys->psz_domain = strdup( psz_domain );
+    p_sys->psz_name = strdup( psz_hostname );
+    p_sys->psz_stype = strdup( psz_type );
+    p_sys->i_port = port;
+
+    p_sys->p_sdRef = malloc( sizeof(DNSServiceRef) );
+    p_sys->p_txtRecord = malloc( sizeof(TXTRecordRef) );
+    TXTRecordCreate( p_sys->p_txtRecord, 0, NULL );
 
     return 1;
 }
 
 static int vlclua_bonjour_delete( lua_State *L )
 {
-    BonjourAdvertiser **pp_advertiser = (BonjourAdvertiser **)luaL_checkudata( L, 1, "bonjour_advertiser" );
-    [*pp_advertiser stop];
-    [*pp_advertiser release];
+    bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
+    bonjour_t *p_sys = *pp_sys;
+
+#warning: why do we crash on exit?
+    // free( p_sys->psz_domain );
+    // free( p_sys->psz_name );
+    // free( p_sys->psz_stype );
+
+    // DNSServiceRefDeallocate( *(p_sys->p_sdRef) );
+    // TXTRecordDeallocate( p_sys->p_txtRecord );
+
+    // free( p_sys->p_sdRef );
+    // free( p_sys->p_txtRecord );
+    // free( p_sys );
+
     return 0;
 }
 
 static int vlclua_bonjour_add_record( lua_State *L )
 {
-    NSString *value, *key;
-    BonjourAdvertiser **pp_advertiser = (BonjourAdvertiser **)luaL_checkudata( L, 1, "bonjour_advertiser" );
+    bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
+    bonjour_t *p_sys = *pp_sys;
     const char *psz_key = luaL_checkstring( L, 2 );
     const char *psz_value = luaL_checkstring( L, 3 );
 
-    value = [NSString stringWithUTF8String:psz_value];
-    key = [NSString stringWithUTF8String:psz_key];
-    [*pp_advertiser addTXTRecordWithKey:key andValue:value];
+    TXTRecordSetValue ( p_sys->p_txtRecord, 
+                        psz_key, 
+                        (uint8_t)strlen( psz_value ), 
+                        psz_value );   
 
     return 1;
 }
 
 static int vlclua_bonjour_publish_service( lua_State *L )
 {
-    BonjourAdvertiser **pp_advertiser = (BonjourAdvertiser **)luaL_checkudata( L, 1, "bonjour_advertiser" );
-    [*pp_advertiser register];
+    bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
+    bonjour_t *p_sys = *pp_sys;
 
-    return 1;
+    DNSServiceRegister ( p_sys->p_sdRef,
+                        0, 
+                        0, 
+                        p_sys->psz_name, 
+                        p_sys->psz_stype,  
+                        p_sys->psz_domain, 
+                        NULL, 
+                        htons( p_sys->i_port ), 
+                        TXTRecordGetLength( p_sys->p_txtRecord ), 
+                        TXTRecordGetBytesPtr( p_sys->p_txtRecord ), 
+                        NULL, 
+                        NULL );
+
+    free( p_sys );
+
+    return 0;
 }
 
 /*****************************************************************************

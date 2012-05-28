@@ -1,8 +1,3 @@
-# Automake forgets to add a proper tag to libtool with Objective-C files.
-# Moreover Libtool should default tag to CC when none is specified but
-# obviously does not. Here is a fix for that.
-LIBTOOL=@LIBTOOL@ --tag=CC
-
 SOURCES_lua = \
 	extension.c \
 	extension.h \
@@ -48,8 +43,12 @@ SOURCES_lua += libs/win.c
 endif
 
 if HAVE_DARWIN
-SOURCES_lua += libs/bonjour.m
-LDFLAGS_lua += -Wl,-framework,Cocoa
+SOURCES_lua += libs/bonjour.c
+endif
+
+if HAVE_LINUX
+SOURCES_lua += libs/bonjour.c
+LDFLAGS_lua += -ldns_sd
 endif
 
 libvlc_LTLIBRARIES += liblua_plugin.la
