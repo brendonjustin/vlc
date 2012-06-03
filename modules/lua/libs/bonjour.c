@@ -28,6 +28,7 @@
 #include "../vlc.h"
 #include "../libs.h"
 
+#include <string.h>
 #include <dns_sd.h>
 #include <arpa/inet.h>
 
@@ -71,8 +72,7 @@ static const luaL_Reg vlclua_bonjour_reg[] = {
 
 static int vlclua_bonjour_init( lua_State *L )
 {
-    // vlc_object_t *p_this = vlclua_get_this( L );
-    bonjour_t *p_sys = (bonjour_t*)malloc( sizeof( bonjour_t ) );
+    bonjour_t *p_sys = (bonjour_t *)calloc( 1, sizeof( bonjour_t ) );
     bonjour_t **pp_sys = lua_newuserdata( L, sizeof( bonjour_t *) );
     *pp_sys = p_sys;
     p_sys->L = L;
@@ -120,16 +120,22 @@ static int vlclua_bonjour_delete( lua_State *L )
     bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
     bonjour_t *p_sys = *pp_sys;
 
-#warning: why do we crash on exit?
-    // free( p_sys->psz_domain );
-    // free( p_sys->psz_name );
-    // free( p_sys->psz_stype );
+    // if( p_sys->psz_domain )
+    //     free( p_sys->psz_domain );
+    // if( p_sys->psz_name )
+    //     free( p_sys->psz_name );
+    // if( p_sys->psz_stype )
+    //     free( p_sys->psz_stype );
 
-    // DNSServiceRefDeallocate( *(p_sys->p_sdRef) );
-    // TXTRecordDeallocate( p_sys->p_txtRecord );
+    // if( p_sys->p_sdRef ) {
+    //     DNSServiceRefDeallocate( *(p_sys->p_sdRef) );
+    //     free( p_sys->p_sdRef );
+    // }
+    // if( p_sys->p_txtRecord ) {
+    //     TXTRecordDeallocate( p_sys->p_txtRecord );
+    //     free( p_sys->p_txtRecord );
+    // }
 
-    // free( p_sys->p_sdRef );
-    // free( p_sys->p_txtRecord );
     // free( p_sys );
 
     return 0;
@@ -142,10 +148,10 @@ static int vlclua_bonjour_add_record( lua_State *L )
     const char *psz_key = luaL_checkstring( L, 2 );
     const char *psz_value = luaL_checkstring( L, 3 );
 
-    TXTRecordSetValue ( p_sys->p_txtRecord, 
-                        psz_key, 
-                        (uint8_t)strlen( psz_value ), 
-                        psz_value );   
+    TXTRecordSetValue ( p_sys->p_txtRecord,
+                        psz_key,
+                        (uint8_t)strlen( psz_value ),
+                        psz_value );
 
     return 1;
 }
@@ -156,16 +162,16 @@ static int vlclua_bonjour_publish_service( lua_State *L )
     bonjour_t *p_sys = *pp_sys;
 
     DNSServiceRegister ( p_sys->p_sdRef,
-                        0, 
-                        0, 
-                        p_sys->psz_name, 
-                        p_sys->psz_stype,  
-                        p_sys->psz_domain, 
-                        NULL, 
-                        htons( p_sys->i_port ), 
-                        TXTRecordGetLength( p_sys->p_txtRecord ), 
-                        TXTRecordGetBytesPtr( p_sys->p_txtRecord ), 
-                        NULL, 
+                        0,
+                        0,
+                        p_sys->psz_name,
+                        p_sys->psz_stype,
+                        p_sys->psz_domain,
+                        NULL,
+                        htons( p_sys->i_port ),
+                        TXTRecordGetLength( p_sys->p_txtRecord ),
+                        TXTRecordGetBytesPtr( p_sys->p_txtRecord ),
+                        NULL,
                         NULL );
 
     free( p_sys );

@@ -102,7 +102,8 @@ function callback_reverse(data, url, request, type, addr, host)
 
     --  Requests don't seem to finish without the content-length header
     --  and some placeholder text
-    return [[Status: 101
+    return [[HTTP/1.1
+Status: 101
 Upgrade: PTTH/1.0
 Connection: Upgrade
 Content-Length: 18
@@ -116,20 +117,43 @@ function callback_play(data, url, request, type, in_var, addr, host)
     vlc.msg.dbg("callback_play")
     if in_var then
         vlc.msg.dbg("in_var: "..in_var)
-        --  Try one format first, then anothers
+        --  try to get the content-location and start-position
+        --  from the HTTP body
         local playback_url = nil
-        local start_time = nil
+        local start_time = 0
         local i, j = string.find(in_var, "Location: ")
+
         if (i ~= nil and j ~= nil) then
+            --  the http message body is plain text
             local k = string.find(in_var, "Start")
             playback_url = string.sub(in_var, j+1, k-2)
             i, j = string.find(in_var, "Position: ")
-            start_time = string.sub(in_var, j+1)
+            start_time = tonumber(string.sub(in_var, j+1))
         else
-            i, j = string.find(in_var, "Location")
-            local k, l = string.find(in_var, ".mp4")
-            playback_url = string.sub(in_var, j+9, l)
-            start_time = 0
+            --  the body is an xml or binary plist
+            i, j = nil, nil
+            i, j = string.find(in_var, "Location</key>")
+            local mod_in_var = in_var
+            if (i ~= nil and j ~= nil) then
+                --  xml plist
+                i, j = string.find(mod_in_var, "<string>", j)
+                local k, l = string.find(mod_in_var, "http://[%w%./:]*/[%w%-]*%.[%w]+", j)
+                playback_url = string.sub(mod_in_var, k, l)
+
+                i, j = string.find(in_var, "Position</key>")
+                k = string.find(mod_in_var, "</string>", j)
+                i, j = string.find(mod_in_var, "<string>", j)
+                mod_in_var = string.sub(mod_in_var, j+1, k-1)
+                start_time = tonumber(mod_in_var)
+            else
+                --  binary plist
+                --  don't know how to get start time value from a binary
+                --  plist, so just set it to 0
+                i, j = string.find(mod_in_var, "Location")
+                local k, l = string.find(mod_in_var, "http://[%w%./:]*/[%w%-]*%.[%w]+", j)
+                playback_url = string.sub(mod_in_var, k, l)
+                start_time = 0
+            end
         end
 
         vlc.playlist.add({{path=vlc.strings.make_uri(playback_url)}})
