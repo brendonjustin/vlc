@@ -40,20 +40,25 @@ local mimes = {
     plist = "text/x-apple-plist+xml",
 }
 
-local APPLETV_SERVER_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
+APPLETV_DEVICEID = '58:55:CA:06:BD:9E'
+APPLETV_FEATURES = '0x29f3'
+APPLETV_MODEL = 'AppleTV3,1'
+APPLETV_SRCVERS = '130.14'
+
+APPLETV_SERVER_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 <key>deviceid</key>
-<string>58:55:CA:06:BD:9E</string>
+<string>]]..APPLETV_DEVICEID..[[</string>
 <key>features</key>
-<integer>119</integer>
+<integer>]]..APPLETV_FEATURES..[[</integer>
 <key>model</key>
-<string>AppleTV2,1</string>
+<string>]]..APPLETV_MODEL..[[</string>
 <key>protovers</key>
 <string>1.0</string>
 <key>srcvers</key>
-<string>101.10</string>
+<string>]]..APPLETV_SRCVERS..[[</string>
 </dict>
 </plist>]]
 
@@ -95,6 +100,74 @@ PLAYBACK_INFO = [[<?xml version="1.0" encoding="UTF-8"?>
 </array>
 </dict>
 </plist>]]
+
+-- POST
+-- Used to set up FairPlay encryption.  Currently does nothing, so disabled 
+function callback_fp_setup(data, url, request, type, addr, host)
+    vlc.msg.dbg("callback_fp_setup")
+
+    --  Requests don't seem to finish without the content-length header
+    --  and some placeholder text
+    return [[Status: 200
+Content-Length: 18
+
+Placeholder text.
+]]
+end
+
+-- POST
+-- not sure what this does
+function callback_getProperty(data, url, request, type, addr, host)
+    vlc.msg.dbg("callback_getProperty")
+
+    if request then
+        local i = string.find(request, "playbackAccessLog")
+
+        if i ~= nil then
+            --  do something
+        else
+            i = string.find(request, "playbackErrorLog")
+            if i ~= nil then
+                --  do something
+            end
+        end
+    end
+
+    --  Requests don't seem to finish without the content-length header
+    --  and some placeholder text
+    return [[Status: 200
+Content-Length: 18
+
+Placeholder text.
+]]
+end
+
+-- PUT
+-- not sure what this does
+function callback_setProperty(data, url, request, type, addr, host)
+    vlc.msg.dbg("callback_setProperty")
+
+    if request then
+        local i = string.find(request, "forwardEndTime")
+
+        if i ~= nil then
+            --  do something
+        else
+            i = string.find(request, "reverseEndTime")
+            if i ~= nil then
+                --  do something
+            end
+        end
+    end
+
+    --  Requests don't seem to finish without the content-length header
+    --  and some placeholder text
+    return [[Status: 200
+Content-Length: 18
+
+Placeholder text.
+]]
+end
 
 -- POST
 function callback_reverse(data, url, request, type, addr, host)
@@ -213,7 +286,6 @@ position: %f
             scrub_body = string.format(scrub_body, duration, position)
             
             return [[Content-Length: ]]..string.len(scrub_body)..[[
-
 
 ]]..scrub_body
         end
@@ -373,14 +445,18 @@ end
 -- Advertise AirPlay support via Bonjour/Avahi
 bonjour = vlc.bonjour()
 bonjour:new_service("local.", "_airplay._tcp", "VLC", "8080")
-bonjour:add_record("deviceid", "00:00:00:00:00:00")
-bonjour:add_record("features", "0x77")
-bonjour:add_record("model", "AppleTV2,1")
-bonjour:add_record("srcvers", "101.10")
+bonjour:add_record("deviceid", APPLETV_DEVICEID)
+bonjour:add_record("features", APPLETV_FEATURES)
+bonjour:add_record("model", APPLETV_MODEL)
+bonjour:add_record("srcvers", APPLETV_SRCVERS)
 bonjour:publish_service()
 
 h = vlc.httpd()
 
+-- We cannot handle fairplay, so disable fpSetup
+-- fpSetup = h:handler("/fp-setup",nil,nil,callback_fp_setup,nil)
+getProperty = h:handler("/getProperty",nil,nil,callback_getProperty,nil)
+setProperty = h:handler("/setProperty",nil,nil,callback_setProperty,nil)
 reverse = h:handler("/reverse",nil,nil,callback_reverse,nil)
 play = h:handler("/play",nil,nil,callback_play,nil)
 scrub = h:handler("/scrub",nil,nil,callback_scrub,nil)

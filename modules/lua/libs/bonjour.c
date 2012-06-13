@@ -108,8 +108,8 @@ static int vlclua_bonjour_new_service( lua_State *L )
     p_sys->psz_stype = strdup( psz_type );
     p_sys->i_port = port;
 
-    p_sys->p_sdRef = malloc( sizeof(DNSServiceRef) );
-    p_sys->p_txtRecord = malloc( sizeof(TXTRecordRef) );
+    p_sys->p_sdRef = malloc( sizeof( DNSServiceRef ) );
+    p_sys->p_txtRecord = malloc( sizeof( TXTRecordRef ) );
     TXTRecordCreate( p_sys->p_txtRecord, 0, NULL );
 
     return 1;
