@@ -207,10 +207,14 @@ function callback_play(data, url, request, type, in_var, addr, host)
             i, j = nil, nil
             i, j = string.find(in_var, "Location</key>")
             local mod_in_var = in_var
+            --  matches HTTP and HTTPS URLs containing alphanumerics,
+            --  punctuation, percents, dashes (-), equals signs, slashes (/),
+            --  and colons
+            local http_pattern_string = "http[s]?://[%w%p%%%-=/:]+"
             if (i ~= nil and j ~= nil) then
                 --  xml plist
                 i, j = string.find(mod_in_var, "<string>", j)
-                local k, l = string.find(mod_in_var, "http://[%w%./:]*/[%w%-]*%.[%w]+", j)
+                local k, l = string.find(mod_in_var, http_pattern_string, j)
                 playback_url = string.sub(mod_in_var, k, l)
 
                 i, j = string.find(in_var, "Position</key>")
@@ -223,8 +227,8 @@ function callback_play(data, url, request, type, in_var, addr, host)
                 --  don't know how to get start time value from a binary
                 --  plist, so just set it to 0
                 i, j = string.find(mod_in_var, "Location")
-                local k, l = string.find(mod_in_var, "http://[%w%./:]*/[%w%-]*%.[%w]+", j)
-                playback_url = string.sub(mod_in_var, k, l)
+                local k, l = string.find(mod_in_var, http_pattern_string, j)
+                playback_url = string.sub(mod_in_var, k, l-1)
                 start_time = 0
             end
         end
