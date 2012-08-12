@@ -273,23 +273,24 @@ position: %f
 
             duration = vlc.var.get(input,"length")
             if not duration then
-                vlc.msg.dbg("duration nil")
+                vlc.msg.dbg("scrub: duration nil")
                 duration = 0
             else
-                vlc.msg.dbg("duration: "..duration)
+                vlc.msg.dbg("scrub: duration: "..duration)
             end
 
             position = vlc.var.get(input,"time")
             if not position then
-                vlc.msg.dbg("position nil")
+                vlc.msg.dbg("scrub: position nil")
                 position = 0
             else
-                vlc.msg.dbg("position: "..position)
+                vlc.msg.dbg("scrub: position: "..position)
             end
 
             scrub_body = string.format(scrub_body, duration, position)
             
             return [[Content-Length: ]]..string.len(scrub_body)..[[
+
 
 ]]..scrub_body
         end
@@ -406,14 +407,14 @@ function callback_playback_info(data, url, request, type, in_var, addr, host)
         if not duration then
             duration = 0
         else
-            vlc.msg.dbg("duration: "..duration)
+            vlc.msg.dbg("playback_info: duration: "..duration)
         end
 
         position = vlc.var.get(input,"time")
         if not position then
             position = 0
         else
-            vlc.msg.dbg("position: "..position)
+            vlc.msg.dbg("playback_info: position: "..position)
         end
     end
 
