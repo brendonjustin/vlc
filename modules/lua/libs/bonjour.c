@@ -38,8 +38,6 @@
  *****************************************************************************/
 typedef struct bonjour_t
 {
-    lua_State           *L;
-
     char                *psz_stype;
     char                *psz_name;
     char                *psz_domain;
@@ -75,7 +73,6 @@ static int vlclua_bonjour_init( lua_State *L )
     bonjour_t *p_sys = (bonjour_t *)calloc( 1, sizeof( bonjour_t ) );
     bonjour_t **pp_sys = lua_newuserdata( L, sizeof( bonjour_t *) );
     *pp_sys = p_sys;
-    p_sys->L = L;
 
     if( luaL_newmetatable( L, "bonjour_advertiser" ) )
     {
