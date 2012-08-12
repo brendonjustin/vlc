@@ -92,13 +92,11 @@ static int vlclua_bonjour_init( lua_State *L )
 
 static int vlclua_bonjour_new_service( lua_State *L )
 {
-    int port;
-
     const char *psz_domain = luaL_checkstring( L, 2 );
     const char *psz_type = luaL_checkstring( L, 3 );
     const char *psz_hostname = luaL_checkstring( L, 4 );
     const char *psz_port = luaL_checkstring( L, 5 );
-    port = atoi( psz_port );
+    int port = atoi( psz_port );
     
     bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
     bonjour_t *p_sys = *pp_sys;
@@ -120,23 +118,20 @@ static int vlclua_bonjour_delete( lua_State *L )
     bonjour_t **pp_sys = (bonjour_t **)luaL_checkudata( L, 1, "bonjour_advertiser" );
     bonjour_t *p_sys = *pp_sys;
 
-    // if( p_sys->psz_domain )
-    //     free( p_sys->psz_domain );
-    // if( p_sys->psz_name )
-    //     free( p_sys->psz_name );
-    // if( p_sys->psz_stype )
-    //     free( p_sys->psz_stype );
-
     // if( p_sys->p_sdRef ) {
     //     DNSServiceRefDeallocate( *(p_sys->p_sdRef) );
-    //     free( p_sys->p_sdRef );
     // }
     // if( p_sys->p_txtRecord ) {
     //     TXTRecordDeallocate( p_sys->p_txtRecord );
-    //     free( p_sys->p_txtRecord );
     // }
 
-    // free( p_sys );
+    // free( p_sys->psz_domain );
+    // free( p_sys->psz_name );
+    // free( p_sys->psz_stype );
+    // free( p_sys->p_sdRef );
+    // free( p_sys->p_txtRecord );
+
+    free( p_sys );
 
     return 0;
 }
