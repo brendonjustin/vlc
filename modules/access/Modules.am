@@ -1,5 +1,6 @@
 SUBDIRS = rtp
 noinst_LTLIBRARIES =
+LIBTOOL=@LIBTOOL@ --tag=CC
 
 libfilesystem_plugin_la_SOURCES = \
 	fs.h \
